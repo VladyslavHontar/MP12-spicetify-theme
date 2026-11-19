@@ -10,6 +10,13 @@
   // theme is injected, so the theme reads it on this very launch.
   try { if (!localStorage.wmpotifyStyle) localStorage.wmpotifyStyle = 'aero'; } catch { /* storage unavailable */ }
 
+  // "Now Playing" (wmpvis) defaults, once: album art + bars across the whole stage, coloured by the scheme.
+  try {
+    if (!localStorage.wmpotifyVisShowAlbumArt && !localStorage.wmpotifyMp12Vis) {
+      Object.assign(localStorage, { wmpotifyMp12Vis: '1', wmpotifyVisShowAlbumArt: '1', wmpotifyVisUseSchemeColors: '1', wmpotifyVisAutoSizeBars: '1' });
+    }
+  } catch { /* storage unavailable */ }
+
   const AERO = ':root[data-wmpotify-style="aero"]';
   const LIGHT = `${AERO}:not([data-wmpotify-dark-mode])`;
   const DARK = `${AERO}[data-wmpotify-dark-mode]`;
@@ -243,7 +250,32 @@
     [data-overlayscrollbars="host"]:has([style*="--cinema-mode-bg-color-from"]) { outline: none !important; border-radius: 0 !important; }
     [data-testid="lyrics-npv-section"] { border: 1px solid #1d3a6e; }
     [data-testid="lyrics-npv-section"] h2 { color: #9cc4ff !important; }
+
+    /* Now Playing stage (wmpvis): WMP12 look — a soft glass glow behind the art, a reflection under it, a caption. */
+    #wmpvis { background: radial-gradient(ellipse at 50% 42%, #1b3556 0%, #0c1626 55%, #05080f 100%) !important; }
+    ${LIGHT} #wmpvis { background: radial-gradient(ellipse at 50% 42%, #ffffff 0%, #e6eef9 55%, #c9d9ee 100%) !important; }
+    #wmpvis .wmpvis-albumArt { -webkit-box-reflect: below 2px linear-gradient(transparent 70%, rgba(255,255,255,.22)); border-radius: 2px; box-shadow: 0 10px 40px rgba(0,0,0,.45); }
+    #wmpvis .wmpvis-visBar { opacity: .5; }
+    #wmpvis-caption { position: absolute; left: 24px; top: 20px; z-index: 3; pointer-events: none; color: #e8f0fa; text-shadow: 0 1px 6px rgba(0,0,0,.6); }
+    #wmpvis-caption b { display: block; font: 600 22px/1.2 "Segoe UI", system-ui, sans-serif; }
+    #wmpvis-caption span { font: 14px/1.4 "Segoe UI", system-ui, sans-serif; opacity: .8; }
+    ${LIGHT} #wmpvis-caption { color: #1c2530; text-shadow: 0 1px 0 rgba(255,255,255,.8); }
   `;
   document.getElementById(style.id)?.remove();
   document.head.appendChild(style);
+
+  // caption "title / artist" in the stage's corner, like WMP's Now Playing
+  const caption = () => {
+    const stage = document.getElementById('wmpvis');
+    let el = document.getElementById('wmpvis-caption');
+    if (!stage) return el?.remove();
+    const m = Spicetify.Player?.data?.item?.metadata; if (!m) return;
+    if (!el) { el = document.createElement('div'); el.id = 'wmpvis-caption'; el.append(document.createElement('b'), document.createElement('span')); stage.appendChild(el); }
+    // write only on change: this runs from a MutationObserver, and an unconditional write re-triggers it forever
+    const [t, a] = [m.title || '', m.artist_name || ''];
+    if (el.firstChild.textContent !== t) el.firstChild.textContent = t;
+    if (el.lastChild.textContent !== a) el.lastChild.textContent = a;
+  };
+  new MutationObserver(caption).observe(document.body, { childList: true, subtree: true });
+  Spicetify.Player?.addEventListener?.('songchange', caption);
 })();
