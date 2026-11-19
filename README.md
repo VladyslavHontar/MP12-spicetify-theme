@@ -5,7 +5,7 @@
 | Light | Dark |
 |---|---|
 | ![Now Playing, light](docs/now-playing-light.jpg) | ![Now Playing, dark](docs/now-playing-dark.jpg) |
-| ![Playlist](docs/playlist.jpg) | ![Artist](docs/artist.jpg) |
+| ![Playlist](docs/playlist.jpg) | ![Artist](docs/artist-dark.jpg) |
 
 ## Install
 
