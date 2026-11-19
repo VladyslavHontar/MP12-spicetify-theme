@@ -135,6 +135,9 @@
        on a light bar (its Basic style). Only the unchecked state: the "liked" check is drawn separately. */
     ${LIGHT} .main-nowPlayingBar-left button[aria-checked="false"] svg { color: #1e395b !important; }
     ${LIGHT} .main-nowPlayingBar-left button[aria-checked="false"]:hover svg { color: #2f7fd6 !important; }
+    /* Ad break: Like / Dislike (thumbs) and the disabled Previous / Next are plain icon buttons, white from the
+       same rule. Play/Pause keeps its own white-on-dark glyph. */
+    ${LIGHT} [data-testid="player-controls"] button:not([data-testid="control-button-playpause"]) svg { color: #1e395b !important; }
 
     /* ================= Compact entity header (playlist / album / liked songs) ====================== */
     #main-view .main-entityHeader-container.main-entityHeader-containerNormal { min-height: 0 !important; height: auto !important; max-height: none !important; }
@@ -153,6 +156,21 @@
       /* cast it to the left only — the blur must not spill up onto the toolbar or down onto the player */
       clip-path: inset(0 0 0 -80px);
     }
+
+    /* ================= Now Playing panel with an animated cover (Canvas) ============================ */
+    /* Spotify fades the looping video into oklch(0.18 0 0), a hard-coded near-black, and sets the title, artist
+       and related videos over that fade. Light mode: those texts are dark, so they vanished into the black.
+       Dark mode: the panel is #222, so the card ended in a visible step. Either way the fade must end in the
+       panel's own colour (one variable per mode). The three scrim layers are siblings next to the video's box:
+       top darkening, bottom fade, overall dimming. */
+    ${LIGHT} { --mp12-panel-rgb: 238, 243, 250; }
+    ${DARK}  { --mp12-panel-rgb: 34, 34, 34; }
+    #Desktop_PanelContainer_Id div:has(> div > video) > div:not(:has(video)) > div:nth-child(1) {
+      background-image: linear-gradient(rgba(var(--mp12-panel-rgb), .85) 0%, rgba(var(--mp12-panel-rgb), 0) 30%) !important; }
+    #Desktop_PanelContainer_Id div:has(> div > video) > div:not(:has(video)) > div:nth-child(2) {
+      background-image: linear-gradient(rgba(var(--mp12-panel-rgb), 0) 0%, rgba(var(--mp12-panel-rgb), 0) 38%, rgba(var(--mp12-panel-rgb), .9) 60%, rgb(var(--mp12-panel-rgb)) 76%) !important; }
+    #Desktop_PanelContainer_Id div:has(> div > video) > div:not(:has(video)) > div:nth-child(3) {
+      background-image: linear-gradient(rgba(var(--mp12-panel-rgb), .25) 0%, rgba(var(--mp12-panel-rgb), .1) 30%, rgba(var(--mp12-panel-rgb), .1) 70%, rgb(var(--mp12-panel-rgb)) 95%) !important; }
 
     /* ================= Lyrics: WMP "now playing" look, dark in both modes ========================== */
     /* Anchored on Spotify's --lyrics-color-* vars, which drive active/inactive line colours. */

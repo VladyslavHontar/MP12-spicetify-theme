@@ -159,12 +159,13 @@ async function suite(scheme) {
     });
     check(T(`${page}: no cover-colour fill behind header`), bg.ok, bg.ok ? '' : JSON.stringify(bg));
     const bad = [];
-    for (const y of [0, 150, 300, 600, 1200]) {
+    for (const y of [0, 60, 90, 140, 200, 300, 600, 1200]) {
       await scrollTo(y);
       const s = await evaluate(() => {
         const hdr = document.querySelector('.main-trackList-trackListHeader');
         const tb = document.querySelector('.main-topBar-container');
-        const tbVisible = tb && getComputedStyle(tb).display !== 'none';
+        const tbVisible = !!tb && getComputedStyle(tb).display !== 'none' && +getComputedStyle(tb).opacity > 0;
+        const tbBg = tb?.querySelector('.main-topBar-background');
         const r = hdr.getBoundingClientRect();
         const top = document.elementFromPoint(r.left + 60, r.top + r.height / 2);
         const title = tb?.querySelector('.main-entityHeader-topbarTitle');
@@ -172,11 +173,13 @@ async function suite(scheme) {
           hdrTop: Math.round(r.top),
           hdrVisible: !!top && hdr.contains(top),
           titleShown: !tbVisible || !title || getComputedStyle(title).opacity === '1',
+          // a visible strip must be opaque, or the header scrolling underneath shows through it
+          stripSolid: !tbVisible || (!!tbBg && getComputedStyle(tbBg).opacity === '1' && /^rgb\(/.test(getComputedStyle(tbBg).backgroundColor)),
         };
       });
-      if (!s.hdrVisible || !s.titleShown) bad.push(`@${y} ${JSON.stringify(s)}`);
+      if (!s.hdrVisible || !s.titleShown || !s.stripSolid) bad.push(`@${y} ${JSON.stringify(s)}`);
     }
-    check(T(`${page}: column header never covered, topbar strip never empty (5 scroll positions)`), !bad.length, bad.join('; '));
+    check(T(`${page}: column header never covered, sticky strip whole and opaque whenever visible (8 scroll positions)`), !bad.length, bad.join('; '));
   }
 
   // 4. Filter box magnifier, seek handle
@@ -196,6 +199,14 @@ async function suite(scheme) {
   });
   if (!panel.skip) check(T('right panel shadow, clipped to the left, z below popovers (7)'), panel.shadow && panel.clipped && panel.z < 7, JSON.stringify(panel));
 
+  // Animated cover (Canvas) in the Now Playing panel: its bottom fade must match the panel, not Spotify's black
+  const canvas = await evaluate(() => {
+    if (!document.querySelector('#Desktop_PanelContainer_Id video')) return null;
+    const scrim = document.querySelector('#Desktop_PanelContainer_Id div:has(> div > video) > div:not(:has(video)) > div:nth-child(2)');
+    return scrim ? getComputedStyle(scrim).backgroundImage : null;
+  });
+  if (canvas) check(T('animated cover: bottom fade matches the panel'), !/oklch/.test(canvas) && (wantDark ? /34, 34, 34/ : /238, 243, 250/).test(canvas), canvas.slice(0, 80));
+
   // 6. Home carousels: no edge fades
   await go('/');
   const fades = await evaluate(() => [...document.querySelectorAll('#main-view [style*="--scrollAnimationRangeStart"]')]
@@ -210,7 +221,8 @@ async function suite(scheme) {
     const host = cin?.closest('[data-overlayscrollbars="host"]')
       ?? document.querySelector('#main-view .main-view-container__scroll-node');
     const vp = host.firstElementChild;
-    const noLyrics = lines.length === 0 && /don't know the lyrics/i.test(document.body.innerText);
+    // zero lines means Spotify rendered no lyrics at all (none for this track, or still loading), so there is nothing of ours to test
+    const noLyrics = lines.length === 0;
     return {
       noLyrics,
       lines: lines.length,

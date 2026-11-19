@@ -131,10 +131,28 @@
   const style = document.createElement('style');
   style.id = 'wmpotify-compat-css';
   style.textContent = `
-    /* When the theme shows the topbar strip (bg faded in), show its title too, so it's never an empty band.
-       Don't display:none the topbar here — Spotify stops computing the fade-in while it's hidden. */
-    #main-view .main-topBar-container [data-testid="topbar-content"],
-    #main-view .main-topBar-container [data-testid="topbar-content"] > * { opacity: 1 !important; visibility: visible !important; transform: none !important; }
+    /* Sticky "▶ Title" strip (playlist / album / liked songs), shown while the entity header scrolls away.
+       Its visibility had three owners that disagreed: the theme (display:none until Spotify's fade-in class
+       appears), Spotify (fades the strip's background and its content on different scroll ranges) and an
+       earlier hack of mine that forced the content visible. That left the title drawn over the half-scrolled
+       header with no background. Now the strip is ONE thing: hidden (opacity, still laid out — Spotify only
+       computes its fade state while it is, so not display:none) until that state flips, then shown whole,
+       with an opaque background. */
+    #main-view .main-topBar-container:has([data-testid="topbar-content"] > span) { display: flex !important; }
+    /* hide only via :not(:has(...)) — two rules for the two states would fight on specificity (:has() takes its
+       argument's specificity) and the hidden one wins forever */
+    #main-view .main-topBar-container:has([data-testid="topbar-content"] > span):not(:has(.main-entityHeader-topbarContentFadeIn)) {
+      opacity: 0;
+      pointer-events: none;
+    }
+    #main-view .main-topBar-container:has(.main-entityHeader-topbarContentFadeIn) .main-topBar-background {
+      opacity: 1 !important;
+      background-color: var(--spice-main) !important;
+    }
+    /* If the theme's page-scoped strip rules are not in effect, Spotify's own 48px play button and 24px title
+       would show instead; keep the strip's proportions regardless. */
+    [data-testid="topbar-content"] > span { font-size: 12px !important; }
+    [data-testid="topbar-content"] button[aria-label] { width: 24px !important; height: 24px !important; min-width: 0 !important; }
 
     /* Seek handle: 1.3.10 hides it with display:none (theme only overrides visibility) */
     [data-testid="playback-progressbar"] .progress-bar__slider { display: block !important; }
